@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  broker:
+    image: rabbitmq:3.11.10-management
+    ports:
+      - 15672:15672  # to be able to manage rabbitmq via web interface
+    healthcheck:  # make sure rabbitmq is ready to accept incoming connections
+      test: rabbitmq-diagnostics check_port_connectivity
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  meter:
+    image: bancini/meter:3
+    environment:
+      RABBIT_HOST: broker
+      SLEEP_TIMEOUT_SECONDS: 2
+    depends_on:  # otherwise it will start earlier than rabbitmq
+      broker:
+        condition: service_healthy
+  pv_simulator:
+    image: bancini/pv_simulator:1
+    environment:
+      RABBIT_HOST: broker
+    depends_on:  # otherwise it will start earlier than rabbitmq
+      broker:
+        condition: service_healthy
+    volumes:
+      - mobility_house:/src/pv_simulator/logs
+
+volumes:
+  mobility_house:
